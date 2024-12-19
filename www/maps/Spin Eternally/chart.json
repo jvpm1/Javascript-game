@@ -1,0 +1,10 @@
+[
+  { "angle": 360, "type": "block", "time": 1.2 },
+  {
+    "angle": 67.5,
+    "angle2": -112.5,
+    "duration": 2,
+    "type": "hold",
+    "time": 1.3
+  }
+]

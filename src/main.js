@@ -1,11 +1,30 @@
-// Imports
 import kaboom from "kaboom";
 
-// Windows value
 const windowWidth = window.innerWidth;
 const windowHeight = window.innerHeight;
 
-// Kaboom init
+let _ = {
+  player: {
+    size: 30,
+  },
+
+  shield: {
+    width: 70,
+    offset: 20,
+  },
+
+  ball: {
+    size: 10,
+    speed: 700,
+  },
+
+  hold: {
+    width: 20,
+    height: 20,
+    speed: 700,
+  },
+};
+
 kaboom({
   background: [36, 36, 36],
   width: windowWidth,
@@ -14,149 +33,239 @@ kaboom({
   letterbox: true,
 });
 
-// Game States
-let SCORE = 0;
-let COMBO = 0;
+const maxDist = Math.max(width(), height()) / 2;
+const centerX = width() / 2;
+const centerY = height() / 2;
 
-// Values
-let hitWindow = 120;
-let hitWindowRounding = 3;
-let hitLine = height() - 100;
-
-// Objects
-const scoreTable = {
-  [0]: {
-    procent: 1.0,
-    text: "Awesome",
-  },
-  [1]: {
-    procent: 0.9,
-    text: "Perfect",
-  },
-  [2]: {
-    procent: 0.6,
-    text: "Good",
-  },
-  [3]: {
-    procent: 0,
-    text: "Bad",
-  },
+const getSpawnPosition = (deg) => {
+  const rad = (deg * Math.PI) / 180;
+  return vec2(
+    centerX + Math.cos(rad) * maxDist,
+    centerY + Math.sin(rad) * maxDist
+  );
 };
 
-// Cache
-const SCORE_LENGHT = Object.keys(scoreTable).length;
+const dirToCenter = (pos) => {
+  const angle = Math.atan2(centerY - pos.y, centerX - pos.x);
+  return vec2(Math.cos(angle), Math.sin(angle));
+};
 
-// Elements
-const scoreLabel = add([
-  text("Score: 0p"),
-  pos(width() / 2, windowHeight * 0.1),
-  anchor("center"),
-  fixed(),
-  { value: 0 },
-]);
+const notfi = (
+  _text,
+  _color = color(255, 255, 255),
+  _pos = pos(centerX, centerY)
+) => add([text(_text), _pos, _color, lifespan(0.5), move(UP, 100)]);
 
-const comboLabel = add([
-  text("Combo: 0x"),
-  pos(width() / 2, windowHeight * 0.1 + 35),
-  anchor("center"),
-  fixed(),
-  { value: 0 },
-]);
-
-const hitLineRect = add([
-  rect(width(), 4),
-  pos(0, hitLine),
-  color(200, 200, 200),
-]);
-
-// Game Functions
-const spawnNote = (xOffset) => {
+scene("start", () => {
   add([
-    circle(20),
-    pos(width() / 2 + 20, xOffset || 0),
-    color(255, 100, 100),
-    "note",
-    {
-      speed: 300,
-    },
+    text("Click anywhere", { size: 24 }),
+    pos(centerX, centerY + 50),
+    anchor("center"),
   ]);
 
-  wait(rand(1, 2), spawnNote);
-};
+  onClick(() => go("main"));
+});
 
-const notfi = (_text, _color) =>
-  add([
-    text(_text),
-    pos(width() / 2, height() / 2),
-    _color || color(255, 255, 255),
-    lifespan(0.5),
-    move(UP, 100),
+scene("main", () => {
+  let gameTime = 0;
+  let chartData = [];
+  let nextNoteIndex = 0;
+  let hasStarted = false;
+  let songAudio = null;
+
+  const player = add([
+    circle(_.player.size),
+    pos(centerX, centerY),
+    anchor("center"),
+    rotate(0),
+    area(),
+    "player",
   ]);
 
-// Functions
-const checkWhichScoreTable = (hitProcent) => {
-  let num = 0;
+  const shield = add([
+    rect(20, _.shield.width),
+    pos(0, 0),
+    anchor("center"),
+    rotate(0),
+    color(WHITE),
+    area(),
+    "shield",
+  ]);
 
-  while (num < SCORE_LENGHT) {
-    const data = scoreTable[num];
+  const spawnBall = (angle) => {
+    const spawnPos = getSpawnPosition(angle);
+    const direction = dirToCenter(spawnPos);
 
-    if (data.procent < hitProcent) {
-      return data;
+    add([
+      circle(_.ball.size),
+      pos(spawnPos),
+      color(RED),
+      anchor("center"),
+      area(),
+      "ball",
+      {
+        dir: direction,
+      },
+      move(direction, _.ball.speed),
+    ]);
+  };
+
+  const spawnHold = (startAngle, endAngle, duration) => {
+    const spawnPos = getSpawnPosition(startAngle);
+    const direction = dirToCenter(spawnPos);
+
+    const hold = add([
+      rect(_.hold.width, _.hold.height),
+      pos(spawnPos),
+      color(YELLOW),
+      anchor("center"),
+      area(),
+      "hold",
+      {
+        startAngle,
+        endAngle,
+        duration,
+        dir: direction,
+      },
+      move(direction, _.hold.speed),
+    ]);
+
+    wait(duration, () => {
+      destroy(hold);
+    });
+  };
+
+  const loadChart = async (chartName) => {
+    try {
+      const chartResponse = await fetch(`/maps/${chartName}/chart.json`);
+      chartData = await chartResponse.json();
+
+      const audioResponse = await fetch(`/maps/${chartName}/song.ogg`);
+      const audioBlob = await audioResponse.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      songAudio = new Audio(audioUrl);
+
+      // Add loading text
+      const loadingText = add([
+        text("Press SPACE to start", { size: 24 }),
+        pos(centerX, centerY),
+        anchor("center"),
+      ]);
+
+      songAudio
+        .play()
+        .then(() => {
+          hasStarted = true;
+          gameTime = 0;
+          nextNoteIndex = 0;
+          destroy(loadingText);
+        })
+        .catch((error) => {
+          console.error("Failed to play audio:", error);
+          notfi(
+            "Failed to play audio! Press SPACE to try again",
+            color(255, 100, 100)
+          );
+        });
+
+      // Song end handler
+      songAudio.addEventListener("ended", () => {
+        hasStarted = false;
+        URL.revokeObjectURL(audioUrl);
+        go("start");
+      });
+    } catch (error) {
+      console.error("Failed to load chart or audio:", error);
+      notfi("Failed to load chart!", color(255, 100, 100));
+    }
+  };
+
+  const onBallCollide = (ball, isMiss) => {
+    notfi(
+      isMiss ? "Miss" : "Nice!",
+      isMiss ? color(255, 100, 100) : color(255, 255, 255),
+      pos(ball.pos.x, ball.pos.y)
+    );
+    destroy(ball);
+  };
+
+  onCollide("ball", "shield", (ball) => {
+    onBallCollide(ball, false);
+  });
+
+  onCollide("ball", "player", (ball) => {
+    onBallCollide(ball, true);
+  });
+
+  onCollide("hold", "shield", (hold) => {
+    notfi("Hold!", color(255, 255, 100), pos(hold.pos.x, hold.pos.y));
+    destroy(hold);
+  });
+
+  onCollide("hold", "player", (hold) => {
+    onBallCollide(hold, true);
+  });
+
+  // Chart playback system
+  onUpdate(() => {
+    if (!hasStarted) return;
+
+    gameTime = songAudio.currentTime;
+    console.log(gameTime);
+
+    // Spawn notes based on time
+    while (
+      nextNoteIndex < chartData.length &&
+      chartData[nextNoteIndex].time <= gameTime
+    ) {
+      const note = chartData[nextNoteIndex];
+
+      if (note.type === "block") {
+        spawnBall(note.angle);
+      } else if (note.type === "hold") {
+        spawnHold(note.angle, note.angle2, note.duration);
+      }
+
+      nextNoteIndex++;
     }
 
-    num++;
-  }
+    // Player & Shield handler
+    const mouse = mousePos();
+    const angle = Math.atan2(mouse.y - player.pos.y, mouse.x - player.pos.x);
 
-  return null;
-};
+    player.angle = rad2deg(angle) + 90;
 
-// Events
-onUpdate("note", (note) => {
-  note.move(0, note.speed);
+    const shieldPos = vec2(
+      player.pos.x + Math.cos(angle) * (_.player.size + _.shield.offset),
+      player.pos.y + Math.sin(angle) * (_.player.size + _.shield.offset)
+    );
 
-  if (note.pos.y > height()) {
-    destroy(note);
-    COMBO = 0;
-    comboLabel.text = `Combo: ${COMBO}x`;
-  }
-});
+    shield.pos = shieldPos;
+    shield.angle = player.angle + 90;
+  });
 
-onKeyPress("space", () => {
-  const notes = get("note");
-  const closest = notes.sort((a, b) => {
-    return Math.abs(a.pos.y - hitLine) - Math.abs(b.pos.y - hitLine);
-  })[0];
-
-  if (closest) {
-    const distance = Math.abs(closest.pos.y - hitLine);
-
-    if (distance < hitWindow) {
-      COMBO++;
-
-      const accuracy = 1 - distance / hitWindow;
-      const data = checkWhichScoreTable(accuracy);
-      const points = Math.floor(data.procent * (COMBO + 1)) * 100;
-
-      SCORE += points;
-
-      console.log(SCORE);
-
-      // Update displays
-      scoreLabel.text = `Score: ${SCORE}p;`;
-      comboLabel.text = `Combo: ${COMBO}x`;
-
-      // Visual feedback
-      notfi(data.text);
-
-      destroy(closest);
-
-      return;
+  // Pause/Resume functionality
+  onKeyPress("escape", () => {
+    if (songAudio) {
+      if (songAudio.paused) {
+        songAudio.play();
+      } else {
+        songAudio.pause();
+      }
     }
+  });
 
-    COMBO = 0;
-    notfi("Miss", color(255, 100, 100));
-  }
+  // Clean up when scene ends
+  onSceneLeave(() => {
+    if (songAudio) {
+      songAudio.pause();
+      songAudio = null;
+    }
+  });
+
+  // Load the chart
+  loadChart("Spin Eternally");
 });
 
-// Main
-spawnNote(Math.random());
+// Start with the start screen
+go("start");
