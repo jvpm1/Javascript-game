@@ -1,27 +1,24 @@
-# Folder structure
+## Contents
+1. [Current branch preview](#current-branch-preview)
+    1. [Video(s)](#videos)
+    2. [Picture(s)](#pictures)
+2. [FAQ](#faq)
+    1. [Where are the games?](#where-are-the-games)
 
-- `src` - source code for your kaboom project
-- `www` - distribution folder, contains your index.html, built js bundle and static assets
 
+## Current branch preview
+> This game is inspired by a that currently is in demo called BeatBlock.
+<br> I've added the basics like the block approaching the player and making the hit count.
+<br> Though hold blocks and everything else are not added.
 
-## Development
+### Video(s)
+![Video]()
 
-```sh
-$ npm run dev
-```
+### Picture(s)
+![Picture](assets/preview_1.png)
 
-will start a dev server at http://localhost:8000
+## FAQ
 
-## Distribution
-
-```sh
-$ npm run build
-```
-
-will build your js files into `www/main.js`
-
-```sh
-$ npm run bundle
-```
-
-will build your game and package into a .zip file, you can upload to your server or itch.io / newground etc.
+### Where are the games?
+Every branch is a different game.
+<br> If you check the readme of the branch, you'll see what the game is.
