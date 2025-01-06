@@ -15,14 +15,16 @@ let _ = {
 
   ball: {
     size: 10,
-    speed: 700,
   },
 
   hold: {
     width: 20,
     height: 20,
-    speed: 700,
   },
+};
+
+let gameData = {
+  scrollSpeed: 700,
 };
 
 kaboom({
@@ -106,7 +108,7 @@ scene("main", () => {
       {
         dir: direction,
       },
-      move(direction, _.ball.speed),
+      move(direction, gameData.scrollSpeed),
     ]);
   };
 
@@ -114,7 +116,7 @@ scene("main", () => {
     const spawnPos = getSpawnPosition(startAngle);
     const direction = dirToCenter(spawnPos);
 
-    const hold = add([
+    add([
       rect(_.hold.width, _.hold.height),
       pos(spawnPos),
       color(YELLOW),
@@ -127,12 +129,8 @@ scene("main", () => {
         duration,
         dir: direction,
       },
-      move(direction, _.hold.speed),
+      move(direction, gameData.scrollSpeed),
     ]);
-
-    wait(duration, () => {
-      destroy(hold);
-    });
   };
 
   const loadChart = async (chartName) => {
@@ -210,7 +208,7 @@ scene("main", () => {
   onUpdate(() => {
     if (!hasStarted) return;
 
-    gameTime = songAudio.currentTime;
+    gameTime = songAudio.currentTime * 2;
     console.log(gameTime);
 
     // Spawn notes based on time
