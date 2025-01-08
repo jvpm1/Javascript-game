@@ -1,5 +1,5 @@
 import kaboom from "kaboom";
-import { getSongsContents } from "../www/assets/modules/song.js";
+import { getSongsData } from "../www/assets/modules/song.js";
 
 const windowWidth = window.innerWidth;
 const windowHeight = window.innerHeight;
@@ -12,4 +12,9 @@ kaboom({
   letterbox: true,
 });
 
-getSongsContents();
+async function renderSongsList() {
+  const songsData = await getSongsData();
+  console.log(songsData);
+}
+
+renderSongsList();
