@@ -1,5 +1,7 @@
 import kaboom from "kaboom";
-import { getSongsData } from "../www/assets/modules/song.js";
+import { getSongsData, renderSongsList } from "../www/assets/modules/mania.js";
+
+const listContainer = document.getElementById("listContainer");
 
 const windowWidth = window.innerWidth;
 const windowHeight = window.innerHeight;
@@ -11,10 +13,5 @@ kaboom({
   stretch: true,
   letterbox: true,
 });
-
-async function renderSongsList() {
-  const songsData = await getSongsData();
-  console.log(songsData);
-}
 
 renderSongsList();

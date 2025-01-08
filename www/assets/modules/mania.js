@@ -1,8 +1,11 @@
 import { getDir } from "./util.js";
+
+export let songsData;
+
 export const SONGS_PATH = "assets/songs/";
 
 export async function decodeOsuFormat(text) {
-  let data = {};
+  let mapData = {};
   let currentSection;
 
   const splitText = text.split(/[\r\n]+/); // https://stackoverflow.com/questions/55409195/reading-ini-file-using-javascript
@@ -13,7 +16,7 @@ export async function decodeOsuFormat(text) {
     if (isSection) {
       currentSection = lineText;
 
-      data[currentSection] =
+      mapData[currentSection] =
         currentSection == "[TimingPoints]" || "[HitObjects]" || "[Events]"
           ? []
           : {};
@@ -24,24 +27,24 @@ export async function decodeOsuFormat(text) {
     switch (currentSection) {
       case "[General]":
       case "[Editor]": {
-        // After benchmarking and testing, indexOf + substring is faster compare to split()
+        // After benchmarking and testing, indexOf + substring is faster compared to split()
         const separatorIndex = lineText.indexOf(": ");
         const index = lineText.substring(0, separatorIndex);
         const value = lineText.substring(separatorIndex + 2); // +2 Skips ": "
 
-        data[currentSection][index] = value;
+        mapData[currentSection][index] = value;
         break;
       }
 
       case "[Events]": {
-        data[currentSection].push(lineText);
+        mapData[currentSection].push(lineText);
         break;
       }
 
       case "[HitObjects]":
       case "[TimingPoints]": {
         const splitObjects = lineText.split(",");
-        data[currentSection].push(splitObjects);
+        mapData[currentSection].push(splitObjects);
         break;
       }
 
@@ -53,13 +56,13 @@ export async function decodeOsuFormat(text) {
         const index = lineText.substring(0, colonIndex);
         const value = lineText.substring(colonIndex + 1);
 
-        data[currentSection][index] = value;
+        mapData[currentSection][index] = value;
         break;
       }
     }
   });
 
-  return data;
+  return mapData;
 }
 
 export async function getSongsData() {
@@ -99,6 +102,51 @@ export async function getSongsData() {
   } catch (err) {
     console.error(`getSongs error! | ${err}`);
 
-    return [];
+    return null;
+  }
+}
+
+export async function renderSongsList() {
+  // Cache song data to songsData
+  if (!songsData) {
+    songsData = await getSongsData();
+  }
+
+  // Clear listContainer
+  listContainer.innerHTML = "";
+
+  for (const songData of songsData) {
+    const mapId = `${songData.name}-map`;
+
+    // Create songContent div with the title
+    const songElement = document.createElement("div");
+    songElement.className = "songContent";
+    songElement.innerHTML += `
+    <button class="songTitle mainButton">
+      <h2>${songData.name}</h2>
+    </button>
+
+    <div class="mapContainer" id="${mapId}"></div>
+    `;
+
+    listContainer.appendChild(songElement);
+
+    // This creates the buttons in the grid for different maps
+    const mapContainer = document.getElementById(mapId);
+    for (const mapData of songData.maps) {
+      const metaData = mapData["[Metadata]"];
+      const difficulty = mapData["[Difficulty]"];
+
+      const buttonElement = document.createElement("button");
+      buttonElement.className = "mainButton mapButton";
+      buttonElement.innerHTML = `<h2>${
+        `[${difficulty.OverallDifficulty}] ` + metaData.Version
+      }</h2>`;
+      mapContainer.appendChild(buttonElement);
+
+      buttonElement.addEventListener("click", () => {
+        console.log(mapData);
+      });
+    }
   }
 }
