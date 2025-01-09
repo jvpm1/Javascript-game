@@ -20,6 +20,7 @@ kaboom({
 
 renderSongsList();
 
+// Exists out of stage
 onKeyPress("escape", async () => {
   const isActive = await cancelStage();
   if (isActive) {
