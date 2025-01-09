@@ -1,5 +1,9 @@
 import kaboom from "kaboom";
-import { getSongsData, renderSongsList } from "../www/assets/modules/mania.js";
+import {
+  getSongsData,
+  renderSongsList,
+  cancelStage,
+} from "../www/assets/modules/mania.js";
 
 const listContainer = document.getElementById("listContainer");
 
@@ -15,3 +19,10 @@ kaboom({
 });
 
 renderSongsList();
+
+onKeyPress("escape", async () => {
+  const isActive = await cancelStage();
+  if (isActive) {
+    renderSongsList();
+  }
+});
