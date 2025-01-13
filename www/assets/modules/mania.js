@@ -18,6 +18,9 @@ export let game = {
   },
 };
 
+const innerWidth = window.innerWidth;
+const innerHeight = window.innerHeight;
+
 export async function cancelStage() {
   const isActive = game.stage.active;
   if (isActive) {
@@ -159,7 +162,7 @@ const KEY_MAP = {
   k: 3,
 };
 
-const HITLINE = window.innerHeight - 200;
+const HITLINE = innerHeight - 200;
 
 export async function loadSong(mapData, songPath) {
   let currentTime = 0;
@@ -170,11 +173,11 @@ export async function loadSong(mapData, songPath) {
   // Create lanes
   const lanes = [];
   const totalWidth = game.stage.laneWidth * 4 + game.stage.laneGap * 3;
-  const middleStartPosition = window.innerWidth / 2 - totalWidth / 2;
+  const middleStartPosition = innerWidth / 2 - totalWidth / 2;
 
   for (let i = 0; i < 4; i++) {
     const lane = add([
-      rect(game.stage.laneWidth, window.innerHeight),
+      rect(game.stage.laneWidth, innerHeight),
       pos(
         middleStartPosition + i * (game.stage.laneWidth + game.stage.laneGap),
         0
@@ -198,10 +201,11 @@ export async function loadSong(mapData, songPath) {
     currentTime = game.stage.audio.currentTime * 1000;
 
     // Arrow moving handler
+    const moveOffset = game.stage.speed * dt() * 10000;
     for (const arrow of arrows) {
-      arrow.move(0, game.stage.speed * dt() * 10000);
+      arrow.move(0, moveOffset);
 
-      if (arrow.pos.y > window.innerHeight) {
+      if (arrow.pos.y > innerHeight) {
         destroy(arrow);
         arrows.splice(arrows.indexOf(arrow), 1);
         console.log("Fial");
@@ -238,8 +242,13 @@ export async function loadSong(mapData, songPath) {
 
   // Create keyPress connection event
   for (const [key, laneIndex] of Object.entries(KEY_MAP)) {
+    let laneNumber = Object.entries(LANE_POSITIONS).filter(
+      (tbl) => tbl[1] == laneIndex
+    )[0][0];
+
     const keyConnection = onKeyPress(key, () => {
-      console.log(key);
+      const notes = upcomingNotes.filter((data) => data[0] != laneNumber);
+      const firstNote = notes[0];
     });
 
     game.stage.keys[key] = keyConnection;
