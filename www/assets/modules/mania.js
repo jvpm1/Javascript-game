@@ -7,7 +7,8 @@ export let game = {
   stage: {
     active: false,
 
-    speed: 12,
+    speed: 17,
+    updateRate: 0.03,
     laneWidth: 100,
     laneGap: 50,
 
@@ -20,6 +21,12 @@ export let game = {
 
 const innerWidth = window.innerWidth;
 const innerHeight = window.innerHeight;
+
+export const notfi = (
+  _text,
+  _color = color(255, 255, 255),
+  _pos = pos(innerWidth / 2, innerHeight / 2)
+) => add([text(_text), _pos, _color, lifespan(0.5), move(UP, 100), "notfi"]);
 
 export async function cancelStage() {
   const isActive = game.stage.active;
@@ -34,8 +41,10 @@ export async function cancelStage() {
       keyConnection[1].cancel();
     }
 
+    destroyAll("hitLine");
+    destroyAll("note");
     destroyAll("lane");
-    destroyAll("arrow");
+    destroyAll("notfi");
 
     game.stage.active = false;
   }
@@ -165,94 +174,122 @@ const KEY_MAP = {
 const HITLINE = innerHeight - 200;
 
 export async function loadSong(mapData, songPath) {
+  // ...
   let currentTime = 0;
 
-  const arrows = [];
-  const upcomingNotes = [...mapData["[HitObjects]"]];
+  // ...
+  let activeNotes = [];
+  let upcomingNotes = [];
 
   // Create lanes
-  const lanes = [];
-  const totalWidth = game.stage.laneWidth * 4 + game.stage.laneGap * 3;
-  const middleStartPosition = innerWidth / 2 - totalWidth / 2;
+  const lanesDefinedWidth = game.stage.laneWidth * 4 + game.stage.laneGap * 3;
+  const laneStartPosition = innerWidth / 2 - lanesDefinedWidth / 2;
 
-  for (let i = 0; i < 4; i++) {
-    const lane = add([
-      rect(game.stage.laneWidth, innerHeight),
-      pos(
-        middleStartPosition + i * (game.stage.laneWidth + game.stage.laneGap),
-        0
-      ),
-      color(30, 30, 30),
-      outline(),
-      "lane",
+  // Functions
+  function buildStage() {
+    // Creates the 4 lanes seen what starting a song
+    // With the lanes it'll also spawn the HitLine
+    // All of this is called the stage
+
+    console.debug("[*] Building stage...");
+
+    for (let i = 0; i < 4; i++) {
+      add([
+        rect(game.stage.laneWidth, innerHeight),
+        pos(
+          laneStartPosition + i * (game.stage.laneWidth + game.stage.laneGap),
+          0
+        ),
+        color(30, 30, 30),
+        outline(),
+        "lane",
+      ]);
+    }
+
+    add([
+      rect(lanesDefinedWidth, 2),
+      pos(laneStartPosition, HITLINE),
+      color(255, 255, 255),
+      "hitLine",
     ]);
 
-    lanes.push(lane);
+    console.debug("[!] Done building stage!");
   }
 
-  const lane = add([
-    rect(totalWidth, 2),
-    pos(middleStartPosition, HITLINE),
-    color(255, 255, 255),
-    "lane",
-  ]);
+  function init() {
+    // This preloads / caches calculations like converting values to seconds or miliseconds
+    // Doing this makes it way faster to spawn notes or check a note's position
 
-  function updateArrowSystem() {
+    console.debug("[*] Initializing upcoming notes");
+
+    // Init upcomingNotes
+    for (const noteData of mapData["[HitObjects]"]) {
+      const lanePosition = Number(noteData[0]);
+      const spawnTime = Number(noteData[2]);
+
+      if (lanePosition == "") {
+        continue;
+      }
+
+      upcomingNotes.push({
+        lanePosition: lanePosition,
+        spawnTime: spawnTime,
+        spawnTimeHitline: spawnTime - HITLINE,
+      });
+    }
+
+    console.debug(upcomingNotes);
+
+    console.debug("[!] Done initializing notes!");
+  }
+
+  const halfUpdateRate = game.stage.updateRate / 2;
+  async function update() {
     currentTime = game.stage.audio.currentTime * 1000;
 
-    // Arrow moving handler
-    const moveOffset = game.stage.speed * dt() * 10000;
-    for (const arrow of arrows) {
-      arrow.move(0, moveOffset);
+    // Move all active notes
+    const moveOffset = game.stage.speed * 100;
+    for (const note of get("note")) {
+      note.move(0, moveOffset);
 
-      if (arrow.pos.y > innerHeight) {
-        destroy(arrow);
-        arrows.splice(arrows.indexOf(arrow), 1);
-        console.log("Fial");
+      if (note.pos.y > innerHeight - 50) {
+        notfi("Miss!", color(255, 100, 100));
+
+        destroy(note);
       }
     }
 
-    // Key spawning handler
+    // Note spawning
     const nextNote = upcomingNotes[0];
-    const spawnTime = Number(nextNote[2]);
+    const spawnTimeHitline = nextNote.spawnTimeHitline;
 
-    if (currentTime > spawnTime - HITLINE / (game.stage.speed * dt() * 10000)) {
-      const laneNumber = Number(nextNote[0]);
+    if (currentTime > spawnTimeHitline - moveOffset * halfUpdateRate) {
+      const lanePosition = nextNote.lanePosition;
 
-      const arrow = add([
+      const note = add([
         rect(game.stage.laneWidth, 30),
         pos(
-          middleStartPosition +
-            LANE_POSITIONS[laneNumber] *
+          laneStartPosition +
+            LANE_POSITIONS[lanePosition] *
               (game.stage.laneWidth + game.stage.laneGap),
           0
         ),
         color(255, 255, 255),
         area(),
-        "arrow",
+        "note",
         {
-          lane: laneNumber,
+          lanePosition: lanePosition,
+          spawnTime: nextNote.spawnTime,
         },
       ]);
 
-      arrows.push(arrow);
+      activeNotes.push(note);
       upcomingNotes.shift();
     }
   }
 
-  // Create keyPress connection event
-  for (const [key, laneIndex] of Object.entries(KEY_MAP)) {
-    let laneNumber = Object.entries(LANE_POSITIONS).filter(
-      (tbl) => tbl[1] == laneIndex
-    )[0][0];
-
-    const keyConnection = onKeyPress(key, () => {
-      const notes = upcomingNotes.filter((data) => data[0] != laneNumber);
-      const firstNote = notes[0];
-    });
-
-    game.stage.keys[key] = keyConnection;
-  }
+  buildStage();
+  init();
 
   // Load audio
   game.stage.audio.setAttribute(
@@ -262,12 +299,47 @@ export async function loadSong(mapData, songPath) {
   await game.stage.audio.load();
   await game.stage.audio.play();
 
-  // Start the game loop
-  game.stage.renderLoop = loop(0.02, () => {
-    updateArrowSystem();
-  });
+  // Update loop
+  game.stage.renderLoop = loop(game.stage.updateRate, await update);
 
+  // idk
   game.stage.active = true;
+
+  // Set up key handlers for each lane
+  for (const [key, laneIndex] of Object.entries(KEY_MAP)) {
+    const laneNumber = Object.entries(LANE_POSITIONS).find(
+      ([_, idx]) => idx === laneIndex
+    )[0];
+
+    const keyConnection = onKeyPress(key, () => {
+      const laneNotes = get("note")
+        .filter((note) => note.lanePosition === Number(laneNumber))
+        .sort(
+          (a, b) => Math.abs(a.pos.y - HITLINE) - Math.abs(b.pos.y - HITLINE)
+        );
+
+      if (laneNotes.length > 0) {
+        const closestNote = laneNotes[0];
+        const timingDiff = Math.abs(closestNote.pos.y - HITLINE);
+
+        if (timingDiff <= 10) {
+          notfi("Perfect!", color(255, 255, 100));
+
+          destroy(closestNote);
+        } else if (timingDiff <= 150) {
+          notfi("Great!", color(100, 255, 100));
+
+          destroy(closestNote);
+        } else if (timingDiff <= 250) {
+          notfi("Miss!", color(255, 100, 100));
+
+          destroy(closestNote);
+        }
+      }
+    });
+
+    game.stage.keys[key] = keyConnection;
+  }
 }
 export async function renderSongsList() {
   // Cache song data to songsData
