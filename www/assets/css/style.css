@@ -10,7 +10,6 @@
 
   display: flex;
   flex-direction: column;
-  gap: 70px;
 
   overflow-y: scroll;
 
@@ -18,8 +17,15 @@
   height: 100%;
 }
 
+#mainCanvas {
+  display: block;
+}
+
 .songContent {
   display: flex;
+  margin-top: 50px;
+  margin-bottom: 50px;
+
   flex-direction: column;
   align-items: center;
   gap: 20px;

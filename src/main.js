@@ -4,12 +4,10 @@ import { loadSongsList, cancelStage } from "../www/assets/modules/mania.js";
 const INNER_WIDTH = window.innerWidth;
 const INNER_HEIGHT = window.innerHeight;
 
+const getMainCanvas = document.getElementById("mainCanvas");
 kaboom({
   background: [36, 36, 36],
-  width: INNER_WIDTH,
-  height: INNER_HEIGHT,
-  stretch: true,
-  letterbox: true,
+  canvas: getMainCanvas,
 });
 
 loadSongsList();

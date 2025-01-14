@@ -172,13 +172,14 @@ export const loadSong = async (mapData, songPath) => {
   };
 
   const handleNoteHit = (timingDiff, closestNote) => {
-    if (timingDiff <= maxHitDistance * 0.4) {
+    if (timingDiff <= maxHitDistance * 0.3) {
       notify("Perfect!", color(255, 100, 255));
-    } else if (timingDiff <= maxHitDistance * 0.7) {
+    } else if (timingDiff <= maxHitDistance * 0.5) {
       notify("Great!", color(255, 255, 100));
     } else if (timingDiff <= maxHitDistance) {
       notify("Bad!", color(100, 255, 100));
     }
+
     destroy(closestNote);
   };
 
@@ -257,6 +258,8 @@ export const loadSong = async (mapData, songPath) => {
         const timingDiff = Math.abs(closestNote.pos.y - hitLinePosition);
         if (timingDiff <= maxHitDistance) {
           handleNoteHit(timingDiff, closestNote);
+        } else {
+          notify("Miss!", color(255, 100, 100));
         }
       }
     });
@@ -275,11 +278,12 @@ export const loadSongsList = async () => {
 
   songsData.forEach((songData) => {
     const mapId = `${songData.name}-map`;
+    const titleId = `${songData.name}-title`;
     const songElement = document.createElement("div");
     songElement.className = "songContent";
     songElement.innerHTML = `
       <button class="songTitle mainButton">
-        <h2>${songData.name}</h2>
+        <h2 id="${titleId}">...</h2>
       </button>
       <div class="mapContainer" id="${mapId}"></div>
     `;
@@ -287,13 +291,16 @@ export const loadSongsList = async () => {
     listContainer.appendChild(songElement);
 
     const mapContainer = document.getElementById(mapId);
+    const titleElement = document.getElementById(titleId);
+
     songData.maps.forEach((mapData) => {
-      const { Version } = mapData["[Metadata]"];
-      const { OverallDifficulty } = mapData["[Difficulty]"];
+      const { Version, Title, Artist } = mapData["[Metadata]"];
+
+      titleElement.innerHTML = `${Title} <br> Song by: ${Artist}`;
 
       const buttonElement = document.createElement("button");
       buttonElement.className = "mainButton mapButton";
-      buttonElement.innerHTML = `<h2>[${OverallDifficulty}] ${Version}</h2>`;
+      buttonElement.innerHTML = `<h2>${Version}</h2>`;
 
       buttonElement.addEventListener("click", () => {
         listContainer.style.display = "none";
