@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.png" width="30%" alt="Stage">
+</p>
+
 ## Contents
 
 1. [Current branch preview](#current-branch-preview)
