@@ -8,15 +8,27 @@
 
 ## Current branch preview
 
-> Made a mania game that has the functions hitline, score system and a easy way to spawn in circles
+> I remade osu mania with kaboom.js
+> <br> You can load songs from the original game into this game and it'll work the same.
 
-### Video(s)
+Inspired by: https://osu.ppy.sh/
 
-![Video](assets/gameplay_ripoff_mania.mp4)
+## Video(s)
+
+#### ver 1.1 alpha
+
+![Video](assets/gameplay_ver1.1.mp4)
+
+#### ver 0.1
+
+![Video](assets/gameplay_ver0.1.mp4)
 
 ### Picture(s)
 
-![Picture]()
+#### ver 1.1 alpha
+
+![Songs list](assets/songsList_ver1.1.png)
+![Stage](assets/stage_ver1.1.png)
 
 ## FAQ
 

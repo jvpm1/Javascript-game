@@ -66,7 +66,6 @@ export const cancelStage = async () => {
       keyConnection.cancel();
     });
 
-    // Clean up game objects
     ["hitLine", "note", "lane", "notification"].forEach((tag) => {
       destroyAll(tag);
     });
