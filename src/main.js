@@ -1,29 +1,23 @@
 import kaboom from "kaboom";
-import {
-  getSongsData,
-  renderSongsList,
-  cancelStage,
-} from "../www/assets/modules/mania.js";
+import { loadSongsList, cancelStage } from "../www/assets/modules/mania.js";
 
-const listContainer = document.getElementById("listContainer");
-
-const windowWidth = window.innerWidth;
-const windowHeight = window.innerHeight;
+const INNER_WIDTH = window.innerWidth;
+const INNER_HEIGHT = window.innerHeight;
 
 kaboom({
   background: [36, 36, 36],
-  width: windowWidth,
-  height: windowHeight,
+  width: INNER_WIDTH,
+  height: INNER_HEIGHT,
   stretch: true,
   letterbox: true,
 });
 
-renderSongsList();
+loadSongsList();
 
 // Exists out of stage
 onKeyPress("escape", async () => {
   const isActive = await cancelStage();
   if (isActive) {
-    renderSongsList();
+    loadSongsList();
   }
 });
