@@ -1,5 +1,5 @@
 // Imports
-import { getDir } from "./util.js";
+// import { getDir } from "./util.js";
 import { decodeOsuFormat } from "./parser.js";
 
 // Core
@@ -49,7 +49,7 @@ export const game = {
 export const notify = (
   _text,
   _textColor = color(255, 255, 255),
-  _position = pos(INNER_WIDTH / 2, INNER_HEIGHT / 2),
+  _position = pos(INNER_WIDTH / 2, INNER_HEIGHT / 2)
 ) =>
   add([
     text(_text),
@@ -110,7 +110,7 @@ export const getSongsData = async (songsFolderDir = SONGS_PATH) => {
             const response = await fetch(osuPath);
             const osuText = await response.text();
             return decodeOsuFormat(osuText);
-          }),
+          })
         );
 
         return {
@@ -118,7 +118,7 @@ export const getSongsData = async (songsFolderDir = SONGS_PATH) => {
           path: songFolderDir,
           maps: mapsData,
         };
-      }),
+      })
     );
 
     console.debug("Done caching song data!");
@@ -228,7 +228,7 @@ export const loadSong = async (mapData, songPath) => {
         pos(
           laneStartPosition +
             LANE_POSITIONS[nextNote.lanePosition] * laneGapAndWidth,
-          0,
+          0
         ),
         color(255, 255, 255),
         area(),
@@ -250,7 +250,7 @@ export const loadSong = async (mapData, songPath) => {
   // Initialize audio
   game.stage.audio.setAttribute(
     "src",
-    `${songPath}/${mapData["[General]"].AudioFilename}`,
+    `${songPath}/${mapData["[General]"].AudioFilename}`
   );
   game.stage.audio.load();
   await game.stage.audio.play();
@@ -275,7 +275,7 @@ export const loadSong = async (mapData, songPath) => {
 
   Object.entries(KEY_MAP).forEach(([key, laneIndex]) => {
     const laneNumber = Object.entries(LANE_POSITIONS).find(
-      ([_, idx]) => idx === laneIndex,
+      ([_, idx]) => idx === laneIndex
     )[0];
 
     const keyConnection = onKeyPress(key, () => laneOnKeyPress(laneNumber));
