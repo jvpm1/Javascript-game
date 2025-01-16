@@ -1,11 +1,14 @@
 {
   "name": "jsgame",
   "scripts": {
-    "build": "esbuild --bundle src/main.js --outfile=www/main.js --minify",
-    "dev": "esbuild --platform=node --bundle src/main.js --outfile=www/main.js --servedir=www",
+    "build": "esbuild --bundle src/main.js --outfile=src/build.js --minify --allow-overwrite",
+    "dev": "esbuild --platform=node --bundle src/main.js --outfile=src/build.js --servedir=src/",
     "bundle": "npm run build && mkdir -p dist && zip -r dist/game.zip www -x \"**/.DS_Store\""
   },
   "dependencies": {
     "kaboom": "^3000.1.17"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
   }
 }

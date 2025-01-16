@@ -1,5 +1,4 @@
 // Imports
-// import { getDir } from "./util.js";
 import { decodeOsuFormat } from "./parser.js";
 
 // Core
@@ -25,9 +24,12 @@ const KEY_MAP = {
 const mainCanvas = document.getElementById("mainCanvas");
 
 // Vars
-export let songsData;
+let songsData;
+let songsDir;
 
-export const game = {
+let songsFolderLocation = "/assets/songs/";
+
+let game = {
   stage: {
     active: false,
 
@@ -46,10 +48,15 @@ export const game = {
 };
 
 // Functions
+const initSongsDir = async () => {
+  const response = await fetch("/songsDir.json/").then((res) => res.text());
+  songsDir = JSON.parse(response);
+};
+
 export const notify = (
   _text,
   _textColor = color(255, 255, 255),
-  _position = pos(INNER_WIDTH / 2, INNER_HEIGHT / 2)
+  _position = pos(INNER_WIDTH / 2, INNER_HEIGHT / 2),
 ) =>
   add([
     text(_text),
@@ -88,47 +95,77 @@ export const cancelStage = async () => {
   return isActive;
 };
 
-export const getSongsData = async (songsFolderDir = SONGS_PATH) => {
+export const getSongsData = async (overwriteSongDir) => {
   console.debug("Caching song data...");
 
-  try {
-    const songNames = await getDir(songsFolderDir);
-
-    const fetchedSongsData = await Promise.all(
-      songNames.map(async (songName) => {
-        const cleanedSongName = songName.endsWith("/")
-          ? songName.slice(0, -1)
-          : songName;
-        const songFolderDir = `${songsFolderDir}${cleanedSongName}`;
-
-        const songChildren = await getDir(songFolderDir);
-        const osuFiles = songChildren.filter((file) => file.endsWith(".osu"));
-
-        const mapsData = await Promise.all(
-          osuFiles.map(async (file) => {
-            const osuPath = `${songFolderDir}/${file}`;
-            const response = await fetch(osuPath);
-            const osuText = await response.text();
-            return decodeOsuFormat(osuText);
-          })
-        );
-
-        return {
-          name: cleanedSongName,
-          path: songFolderDir,
-          maps: mapsData,
-        };
-      })
-    );
-
-    console.debug("Done caching song data!");
-
-    return fetchedSongsData;
-  } catch (error) {
-    console.error(`getSongs error: ${error}`);
-
-    return null;
+  if (!songsDir) {
+    await initSongsDir();
   }
+
+  const songsData = Promise.all(
+    (overwriteSongDir || songsDir).map(async (tbl) => {
+      const pathToFolder = `${songsFolderLocation}${tbl.name}`;
+      const maps = await Promise.all(
+        tbl.files
+          .filter((fileName) => fileName.endsWith(".osu"))
+          .map(async (fileName) => {
+            const pathToFile = `${songsFolderLocation}${tbl.name}/${fileName}`;
+            const fileContent = await fetch(pathToFile).then((res) =>
+              res.text(),
+            );
+            const osuFormat = await decodeOsuFormat(fileContent);
+
+            return osuFormat;
+          }),
+      );
+
+      return {
+        name: tbl.name,
+        path: pathToFolder,
+        maps: maps,
+      };
+    }),
+  );
+
+  // try {
+  //   const songNames = await getDir(songsFolderDir);
+
+  //   const fetchedSongsData = await Promise.all(
+  //     songNames.map(async (songName) => {
+  //       const cleanedSongName = songName.endsWith("/")
+  //         ? songName.slice(0, -1)
+  //         : songName;
+  //       const songFolderDir = `${songsFolderDir}${cleanedSongName}`;
+
+  //       const songChildren = await getDir(songFolderDir);
+  //       const osuFiles = songChildren.filter((file) => file.endsWith(".osu"));
+
+  //       const mapsData = await Promise.all(
+  //         osuFiles.map(async (file) => {
+  //           const osuPath = `${songFolderDir}/${file}`;
+  //           const response = await fetch(osuPath);
+  //           const osuText = await response.text();
+  //           return decodeOsuFormat(osuText);
+  //         }),
+  //       );
+
+  //       return {
+  //         name: cleanedSongName,
+  //         path: songFolderDir,
+  //         maps: mapsData,
+  //       };
+  //     }),
+  //   );
+
+  //   console.debug("Done caching song data!");
+
+  //   return fetchedSongsData;
+  // } catch (error) {
+  //   console.error(`getSongs error: ${error}`);
+
+  //   return null;
+  // }
+  return songsData;
 };
 
 export const loadSong = async (mapData, songPath) => {
@@ -228,7 +265,7 @@ export const loadSong = async (mapData, songPath) => {
         pos(
           laneStartPosition +
             LANE_POSITIONS[nextNote.lanePosition] * laneGapAndWidth,
-          0
+          0,
         ),
         color(255, 255, 255),
         area(),
@@ -250,7 +287,7 @@ export const loadSong = async (mapData, songPath) => {
   // Initialize audio
   game.stage.audio.setAttribute(
     "src",
-    `${songPath}/${mapData["[General]"].AudioFilename}`
+    `${songPath}/${mapData["[General]"].AudioFilename}`,
   );
   game.stage.audio.load();
   await game.stage.audio.play();
@@ -275,7 +312,7 @@ export const loadSong = async (mapData, songPath) => {
 
   Object.entries(KEY_MAP).forEach(([key, laneIndex]) => {
     const laneNumber = Object.entries(LANE_POSITIONS).find(
-      ([_, idx]) => idx === laneIndex
+      ([_, idx]) => idx === laneIndex,
     )[0];
 
     const keyConnection = onKeyPress(key, () => laneOnKeyPress(laneNumber));
@@ -292,6 +329,7 @@ export const loadSongsList = async () => {
   listContainer.style.display = "flex";
   listContainer.innerHTML = "";
 
+  console.log(songsData);
   songsData.forEach((songData) => {
     const mapId = `${songData.name}-map`;
     const titleId = `${songData.name}-title`;
