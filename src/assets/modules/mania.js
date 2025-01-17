@@ -22,6 +22,9 @@ const KEY_MAP = {
 
 // Elements
 const mainCanvas = document.getElementById("mainCanvas");
+const mainSongsContainer = document.getElementById("mainSongsContainer");
+const songsContainer = document.getElementById("songsContainer");
+const imgBackground = document.getElementById("imgBackground");
 
 // Vars
 let songsData;
@@ -53,10 +56,21 @@ const initSongsDir = async () => {
   songsDir = JSON.parse(response);
 };
 
+function msToTime(s) {
+  // https://stackoverflow.com/questions/9763441/milliseconds-to-time-in-javascript
+  const ms = s % 1000;
+  s = (s - ms) / 1000;
+  const secs = s % 60;
+  s = (s - secs) / 60;
+  const mins = s % 60;
+
+  return mins + ":" + secs;
+}
+
 export const notify = (
   _text,
   _textColor = color(255, 255, 255),
-  _position = pos(INNER_WIDTH / 2, INNER_HEIGHT / 2),
+  _position = pos(INNER_WIDTH / 2, INNER_HEIGHT / 2)
 ) =>
   add([
     text(_text),
@@ -111,12 +125,12 @@ export const getSongsData = async (overwriteSongDir) => {
           .map(async (fileName) => {
             const pathToFile = `${songsFolderLocation}${tbl.name}/${fileName}`;
             const fileContent = await fetch(pathToFile).then((res) =>
-              res.text(),
+              res.text()
             );
             const osuFormat = await decodeOsuFormat(fileContent);
 
             return osuFormat;
-          }),
+          })
       );
 
       return {
@@ -124,7 +138,7 @@ export const getSongsData = async (overwriteSongDir) => {
         path: pathToFolder,
         maps: maps,
       };
-    }),
+    })
   );
 
   // try {
@@ -265,7 +279,7 @@ export const loadSong = async (mapData, songPath) => {
         pos(
           laneStartPosition +
             LANE_POSITIONS[nextNote.lanePosition] * laneGapAndWidth,
-          0,
+          0
         ),
         color(255, 255, 255),
         area(),
@@ -287,7 +301,7 @@ export const loadSong = async (mapData, songPath) => {
   // Initialize audio
   game.stage.audio.setAttribute(
     "src",
-    `${songPath}/${mapData["[General]"].AudioFilename}`,
+    `${songPath}/${mapData["[General]"].AudioFilename}`
   );
   game.stage.audio.load();
   await game.stage.audio.play();
@@ -312,7 +326,7 @@ export const loadSong = async (mapData, songPath) => {
 
   Object.entries(KEY_MAP).forEach(([key, laneIndex]) => {
     const laneNumber = Object.entries(LANE_POSITIONS).find(
-      ([_, idx]) => idx === laneIndex,
+      ([_, idx]) => idx === laneIndex
     )[0];
 
     const keyConnection = onKeyPress(key, () => laneOnKeyPress(laneNumber));
@@ -321,49 +335,66 @@ export const loadSong = async (mapData, songPath) => {
   });
 };
 
+export const loadSongDetail = async (songData) => {
+  const mapData = songData.maps[0];
+  const img = mapData["[Events]"][0][2].replaceAll('"', "");
+  const imgBackground = document.getElementById("imgBackground");
+  imgBackground.src = `./assets/songs/${songData.name}/${img}`;
+};
+
 export const loadSongsList = async () => {
   if (!songsData) {
     songsData = await getSongsData();
   }
 
-  listContainer.style.display = "flex";
-  listContainer.innerHTML = "";
+  const songsContainer = document.getElementById("songsContainer");
+  const hasLoadedDetailPage = false;
 
-  console.log(songsData);
+  songsContainer.style.display = "block";
+  songsContainer.innerHTML = "";
+
   songsData.forEach((songData) => {
-    const mapId = `${songData.name}-map`;
-    const titleId = `${songData.name}-title`;
+    const mapData = songData.maps[0];
+    if (!mapData) {
+      return;
+    }
 
-    const songElement = document.createElement("div");
-    songElement.className = "songContent";
-    songElement.innerHTML = `
-      <button class="songTitle mainButton">
-        <h2 id="${titleId}">...</h2>
-      </button>
-      <div class="mapContainer" id="${mapId}"></div>
-    `;
-    listContainer.appendChild(songElement);
+    if (!hasLoadedDetailPage) {
+      loadSongDetail(songData);
+    }
 
-    const mapContainer = document.getElementById(mapId);
-    const titleElement = document.getElementById(titleId);
-    songData.maps.forEach((mapData) => {
-      const { Version, Title, Artist } = mapData["[Metadata]"];
+    const hitObjects = mapData["[HitObjects]"];
+    const { Title, Artist, Creator } = mapData["[Metadata]"];
+    const img = mapData["[Events]"][0][2].replaceAll('"', "");
+    const length = hitObjects[hitObjects.length - 2][2];
 
-      titleElement.innerHTML = `${Title} <br> Song by: ${Artist}`;
+    const songButton = document.createElement("button");
+    songButton.className =
+      "mb-5 relative p-5 flex flex-row items-center gap-5 flex-shrink-0 w-full h-43 rounded-2xl overflow-hidden cursor-pointer border-none m-0 bg-transparent shadow-xl";
 
-      const buttonElement = document.createElement("button");
-      buttonElement.className = "mainButton mapButton";
-      buttonElement.innerHTML = `<h2>${Version}</h2>`;
+    songButton.innerHTML = `
+      <img
+          src="./assets/songs/${songData.name}/${img}"
+          alt=""
+          class="absolute inset-0 w-full h-full object-cover scale-150 blur-lg brightness-30"
+      />
+      <img
+          src="./assets/songs/${songData.name}/${img}"
+          alt=""
+          class="relative flex-shrink-0 w-28 h-28 rounded-xl object-cover shadow-xl shadow-[rgba(0,0,0,0.5)]"
+      />
+      <div class="relative flex flex-col items-start h-full w-full rounded-xl bg-[rgba(0,0,0,0.7)] p-3">
+          <div class="text-3xl m-0 text-wrap font-bold">${Title}</div>
+          <div class="m-0">Artist: ${Artist}</div>
+          <div class="m-0">Mapper: ${Creator}</div>
+          <div class="m-0">Length: ${msToTime(length)}</div>
+      </div>
+      `;
 
-      buttonElement.addEventListener("click", async () => {
-        listContainer.style.display = "none";
-
-        await loadSong(mapData, songData.path);
-
-        mainCanvas.focus();
-      });
-
-      mapContainer.appendChild(buttonElement);
+    songButton.addEventListener("click", () => {
+      loadSongDetail(songData);
     });
+
+    songsContainer.appendChild(songButton);
   });
 };

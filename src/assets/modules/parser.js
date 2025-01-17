@@ -33,7 +33,10 @@ export const decodeOsuFormat = async (text) => {
         break;
       }
       case "[Events]": {
-        mapData[currentSection].push(line);
+        if (line.startsWith("//")) break;
+
+        const splitObjects = line.split(",");
+        mapData[currentSection].push(splitObjects);
         break;
       }
       case "[HitObjects]":

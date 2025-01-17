@@ -13,7 +13,7 @@ const defaultJsonLocation = "./src/songsDir.json";
 
 const generateJsonSongsFile = async (
   songsDir: string,
-  fileLocation: string = defaultJsonLocation,
+  fileLocation: string = defaultJsonLocation
 ) => {
   const songFiles: Object = fs.readdirSync(songsDir).map((fileName: string) => {
     const songFile: SongFile = {
