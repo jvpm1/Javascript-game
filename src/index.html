@@ -1,41 +1,62 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <script src="https://cdn.tailwindcss.com"></script>
+        <script src="https://cdn.tailwindcss.com"></script>
 
-    <title>JSGame</title>
-  </head>
-  <body class="text-white">
-    <main
-      id="mainSongsContainer"
-      class="absolute w-full h-full grid grid-cols-2 gap-0 bg-black"
-    >
-      <div class="absolute w-full h-full overflow-hidden">
-        <img
-          src=""
-          alt=""
-          id="imgBackground"
-          class="absolute inset-0 w-full h-full object-cover scale-200 blur-lg brightness-30"
-        />
-      </div>
+        <title>JSGame</title>
+    </head>
+    <body class="text-white">
+        <main
+            id="mainSongsContainer"
+            class="absolute w-full h-full grid-cols-2 gap-0 bg-black"
+        >
+            <div class="absolute w-full h-full overflow-hidden">
+                <img
+                    src=""
+                    alt=""
+                    id="imgBackground"
+                    class="absolute inset-0 w-full h-full object-cover scale-200 blur-lg brightness-50"
+                />
+            </div>
 
-      <div
-        id="songsContainer"
-        class="relative p-5 flex flex-col-reverse justify-end gap-8 overflow-y-scroll"
-        style="-ms-overflow-style: none; scrollbar-width: none"
-      ></div>
+            <div
+                id="songsContainer"
+                class="relative p-5 gap-8 overflow-y-scroll"
+                style="-ms-overflow-style: none; scrollbar-width: none"
+            ></div>
 
-      <div class="detailContainer relative p-5 flex flex-col-reverse gap">
-        <div class="relative w-full h-full rounded-2xl bg-black">
-          <h2 class="p-5 text-5xl font-bold">FREEDOM DIVE</h2>
-        </div>
-      </div>
-    </main>
+            <div class="detailContainer relative p-5 flex flex-col-reverse gap">
+                <div
+                    class="relative flex flex-col w-full h-full rounded-2xl bg-zinc-950/20 backdrop-blur-2xl p-5"
+                >
+                    <div
+                        id="detailTitleContainer"
+                        class="relative w-full flex flex-col h-auto justify-center overflow-hidden rounded-xl"
+                    >
+                        <img
+                            src=""
+                            alt=""
+                            id="detailImg"
+                            class="absolute inset-0 w-full h-full object-cover brightness-75 blur-xl scale-110"
+                        />
+                        <div
+                            id="detailTitle"
+                            class="relative text-center text-5xl p-5 font-bold"
+                        ></div>
+                    </div>
 
-    <canvas id="mainCanvas" class="block"></canvas>
-    <script src="./build.js"></script>
-  </body>
+                    <div
+                        id="mapsContainer"
+                        class="h-full w-full p-6 flex flex-col gap-5"
+                    ></div>
+                </div>
+            </div>
+        </main>
+
+        <canvas id="mainCanvas" class="block"></canvas>
+        <script src="./build.js"></script>
+    </body>
 </html>

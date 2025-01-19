@@ -24,7 +24,12 @@ const KEY_MAP = {
 const mainCanvas = document.getElementById("mainCanvas");
 const mainSongsContainer = document.getElementById("mainSongsContainer");
 const songsContainer = document.getElementById("songsContainer");
+
+const mapsContainer = document.getElementById("mapsContainer");
 const imgBackground = document.getElementById("imgBackground");
+
+const detailTitle = document.getElementById("detailTitle");
+const detailImg = document.getElementById("detailImg");
 
 // Vars
 let songsData;
@@ -37,7 +42,7 @@ let game = {
     active: false,
 
     speed: 7,
-    updateRate: 0.025,
+    updateRate: 0.03,
 
     laneWidth: 140,
     laneGap: 20,
@@ -301,7 +306,7 @@ export const loadSong = async (mapData, songPath) => {
   // Initialize audio
   game.stage.audio.setAttribute(
     "src",
-    `${songPath}/${mapData["[General]"].AudioFilename}`
+    `${songPath}${mapData["[General]"].AudioFilename}`
   );
   game.stage.audio.load();
   await game.stage.audio.play();
@@ -336,10 +341,30 @@ export const loadSong = async (mapData, songPath) => {
 };
 
 export const loadSongDetail = async (songData) => {
-  const mapData = songData.maps[0];
-  const img = mapData["[Events]"][0][2].replaceAll('"', "");
-  const imgBackground = document.getElementById("imgBackground");
-  imgBackground.src = `./assets/songs/${songData.name}/${img}`;
+  const firstMapData = songData.maps[0];
+  const { Title } = firstMapData["[Metadata]"];
+  const img = firstMapData["[Events]"][0][2].replaceAll('"', "");
+  const imgPath = `./assets/songs/${songData.name}/${img}`;
+
+  // Assign images
+  imgBackground.src = imgPath;
+  detailImg.src = imgPath;
+  detailTitle.innerHTML = Title;
+
+  // Update map elements
+  mapsContainer.innerHTML = "";
+  songData.maps.forEach((mapData) => {
+    const detailButton = document.createElement("button");
+    detailButton.className =
+      "w-full h-20 bg-zinc-950 rounded-lg font-bold text-2xl text-left p-5";
+    detailButton.innerHTML = mapData["[Metadata]"].Version;
+
+    mapsContainer.appendChild(detailButton);
+    detailButton.addEventListener("click", async () => {
+      mainSongsContainer.style.display = "none";
+      await loadSong(mapData, `assets/songs/${songData.name}/`);
+    });
+  });
 };
 
 export const loadSongsList = async () => {
@@ -348,9 +373,9 @@ export const loadSongsList = async () => {
   }
 
   const songsContainer = document.getElementById("songsContainer");
-  const hasLoadedDetailPage = false;
+  let hasLoadedDetailPage = false;
 
-  songsContainer.style.display = "block";
+  mainSongsContainer.style.display = "grid";
   songsContainer.innerHTML = "";
 
   songsData.forEach((songData) => {
@@ -361,6 +386,7 @@ export const loadSongsList = async () => {
 
     if (!hasLoadedDetailPage) {
       loadSongDetail(songData);
+      hasLoadedDetailPage = true;
     }
 
     const hitObjects = mapData["[HitObjects]"];
@@ -381,9 +407,9 @@ export const loadSongsList = async () => {
       <img
           src="./assets/songs/${songData.name}/${img}"
           alt=""
-          class="relative flex-shrink-0 w-28 h-28 rounded-xl object-cover shadow-xl shadow-[rgba(0,0,0,0.5)]"
+          class="relative flex-shrink-0 w-32 h-32 rounded-xl object-cover shadow-xl shadow-[rgba(0,0,0,0.3)]"
       />
-      <div class="relative flex flex-col items-start h-full w-full rounded-xl bg-[rgba(0,0,0,0.7)] p-3">
+      <div class="relative flex flex-col items-start h-full w-full rounded-xl bg-[rgba(0,0,0,0.7)] shadow-xl shadow-[rgba(0,0,0,0.3)] p-3">
           <div class="text-3xl m-0 text-wrap font-bold">${Title}</div>
           <div class="m-0">Artist: ${Artist}</div>
           <div class="m-0">Mapper: ${Creator}</div>
