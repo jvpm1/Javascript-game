@@ -21,6 +21,7 @@ const KEY_MAP = {
 };
 
 // Elements
+const mainCanvas = document.getElementById("mainCanvas");
 const mainSongsContainer = document.getElementById("mainSongsContainer");
 const songsContainer = document.getElementById("songsContainer");
 
@@ -39,9 +40,7 @@ let game = {
   stage: {
     active: false,
 
-    speed: 1,
     approachTime: 600,
-    updateRate: 0.03,
 
     laneWidth: 140,
     laneGap: 20,
@@ -253,8 +252,6 @@ export const loadSong = async (mapData, songPath) => {
     }
   };
 
-  let stop = false;
-
   const update = async () => {
     currentTime = game.stage.audio.currentTime * 1000;
 
@@ -292,7 +289,6 @@ export const loadSong = async (mapData, songPath) => {
 
       upcomingNotes.shift();
       laneNotes[nextNote.lanePosition].push(note);
-      stop = true;
     }
 
     // Update existing notes
@@ -330,7 +326,8 @@ export const loadSong = async (mapData, songPath) => {
     const closestNote = laneNotes[laneNumber][0];
     if (!closestNote) return;
 
-    const timingDiff = Math.abs(closestNote.pos.y - hitLinePosition);
+    const timingDiff = Math.abs(closestNote.spawnTime - currentTime); // Math.abs(closestNote.pos.y - hitLinePosition);
+
     if (timingDiff <= maxHitDistance) {
       destroy(closestNote);
 
@@ -352,21 +349,33 @@ export const loadSong = async (mapData, songPath) => {
 
 export const loadSongDetail = async (songData) => {
   const firstMapData = songData.maps[0];
+
   const { Title } = firstMapData["[Metadata]"];
   const img = firstMapData["[Events]"][0][2].replaceAll('"', "");
   const imgPath = `${SONGS_PATH}${songData.name}/${img}`;
+
+  console.log(songData);
 
   // Assign images
   imgBackground.src = imgPath;
   detailImg.src = imgPath;
   detailTitle.innerHTML = Title;
 
+  // Load song
+  game.stage.audio.setAttribute(
+    "src",
+    `${songData.path}/${firstMapData["[General]"].AudioFilename}`
+  );
+
+  game.stage.audio.load();
+  await game.stage.audio.play();
+
   // Update map elements
   mapsContainer.innerHTML = "";
   songData.maps.forEach((mapData) => {
     const detailButton = document.createElement("button");
     detailButton.className =
-      "w-full h-20 bg-zinc-950 rounded-lg font-bold text-2xl text-left p-5";
+      "relative w-full h-20 bg-zinc-950/70 rounded-lg font-bold text-2xl text-left p-5 mb-5 ";
     detailButton.innerHTML = mapData["[Metadata]"].Version;
 
     mapsContainer.appendChild(detailButton);
@@ -376,13 +385,13 @@ export const loadSongDetail = async (songData) => {
       lastSelectedSong = songData;
 
       await loadSong(mapData, `assets/songs/${songData.name}/`);
+
+      mainCanvas.focus();
     });
   });
 };
 
 export const loadSongsList = async () => {
-  let firstTime = true;
-
   if (!songsData) {
     songsData = await getSongsData();
   }
@@ -394,11 +403,6 @@ export const loadSongsList = async () => {
     const mapData = songData.maps[0];
     if (!mapData) {
       return;
-    }
-
-    if (firstTime) {
-      loadSongDetail(lastSelectedSong || songData);
-      firstTime = false;
     }
 
     const hitObjects = mapData["[HitObjects]"];

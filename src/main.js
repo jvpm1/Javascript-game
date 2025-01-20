@@ -6,7 +6,7 @@ import { loadSongsList, cancelStage } from "./assets/modules/mania.js";
 
 const getMainCanvas = document.getElementById("mainCanvas");
 kaboom({
-  background: [36, 36, 36],
+  background: [0, 0, 0],
   canvas: getMainCanvas,
 });
 
