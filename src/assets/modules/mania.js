@@ -21,7 +21,6 @@ const KEY_MAP = {
 };
 
 // Elements
-const mainCanvas = document.getElementById("mainCanvas");
 const mainSongsContainer = document.getElementById("mainSongsContainer");
 const songsContainer = document.getElementById("songsContainer");
 
@@ -32,16 +31,16 @@ const detailTitle = document.getElementById("detailTitle");
 const detailImg = document.getElementById("detailImg");
 
 // Vars
+let lastSelectedSong;
 let songsData;
 let songsDir;
-
-let songsFolderLocation = "/assets/songs/";
 
 let game = {
   stage: {
     active: false,
 
-    speed: 7,
+    speed: 1,
+    approachTime: 600,
     updateRate: 0.03,
 
     laneWidth: 140,
@@ -123,12 +122,12 @@ export const getSongsData = async (overwriteSongDir) => {
 
   const songsData = Promise.all(
     (overwriteSongDir || songsDir).map(async (tbl) => {
-      const pathToFolder = `${songsFolderLocation}${tbl.name}`;
+      const pathToFolder = `${SONGS_PATH}${tbl.name}`;
       const maps = await Promise.all(
         tbl.files
           .filter((fileName) => fileName.endsWith(".osu"))
           .map(async (fileName) => {
-            const pathToFile = `${songsFolderLocation}${tbl.name}/${fileName}`;
+            const pathToFile = `${SONGS_PATH}${tbl.name}/${fileName}`;
             const fileContent = await fetch(pathToFile).then((res) =>
               res.text()
             );
@@ -189,16 +188,13 @@ export const getSongsData = async (overwriteSongDir) => {
 
 export const loadSong = async (mapData, songPath) => {
   // Cache calculations
+  const approachTime = game.stage.approachTime;
   const lanesDefinedWidth = game.stage.laneWidth * 4 + game.stage.laneGap * 3;
   const laneStartPosition = INNER_WIDTH / 2 - lanesDefinedWidth / 2;
   const laneGapAndWidth = game.stage.laneWidth + game.stage.laneGap;
   const hitLinePosition = INNER_HEIGHT - game.stage.hitLineOffset;
   const maxHitDistance = game.stage.maxHitDistance;
   const missPositionThreshold = hitLinePosition + maxHitDistance;
-  const noteUpdateOffset = game.stage.speed * (game.stage.updateRate * 10000);
-  const timeToReachHitLine =
-    (hitLinePosition / (game.stage.speed * (game.stage.updateRate * 10000))) *
-    1000;
 
   let currentTime = 0;
   let upcomingNotes = [];
@@ -257,18 +253,10 @@ export const loadSong = async (mapData, songPath) => {
     }
   };
 
+  let stop = false;
+
   const update = async () => {
     currentTime = game.stage.audio.currentTime * 1000;
-
-    // Update existing notes
-    get("note").forEach((note) => {
-      note.move(0, noteUpdateOffset);
-      if (note.pos.y > missPositionThreshold) {
-        notify("Miss!", color(255, 100, 100));
-        laneNotes[note.lanePosition].shift();
-        destroy(note);
-      }
-    });
 
     // Handle next note
     const nextNote = upcomingNotes[0];
@@ -278,26 +266,48 @@ export const loadSong = async (mapData, songPath) => {
       return;
     }
 
-    if (currentTime > nextNote.spawnTime - timeToReachHitLine) {
+    // Spawn note
+    if (currentTime > nextNote.spawnTime - approachTime) {
+      const startTime = currentTime;
+      const totalDistance = nextNote.spawnTime - startTime;
+
+      const horizontalPosition =
+        laneStartPosition +
+        LANE_POSITIONS[nextNote.lanePosition] * laneGapAndWidth;
+
       const note = add([
         rect(game.stage.laneWidth, 30),
-        pos(
-          laneStartPosition +
-            LANE_POSITIONS[nextNote.lanePosition] * laneGapAndWidth,
-          0
-        ),
+        pos(horizontalPosition, 0),
         color(255, 255, 255),
         area(),
         "note",
         {
           lanePosition: nextNote.lanePosition,
           spawnTime: nextNote.spawnTime,
+          startTime: startTime,
+          totalDistance: totalDistance,
+          xPos: horizontalPosition,
         },
       ]);
 
       upcomingNotes.shift();
       laneNotes[nextNote.lanePosition].push(note);
+      stop = true;
     }
+
+    // Update existing notes
+    get("note").forEach((note) => {
+      const currentProgress = currentTime - note.startTime;
+      const progressPercentage = currentProgress / note.totalDistance;
+
+      note.moveTo(note.xPos, hitLinePosition * progressPercentage);
+
+      if (note.pos.y > missPositionThreshold) {
+        notify("Miss!", color(255, 100, 100));
+        destroy(note);
+        laneNotes[note.lanePosition].shift();
+      }
+    });
   };
 
   buildStage();
@@ -312,7 +322,7 @@ export const loadSong = async (mapData, songPath) => {
   await game.stage.audio.play();
 
   // Update loop
-  game.stage.renderLoop = loop(game.stage.updateRate, update);
+  game.stage.renderLoop = onUpdate(update);
   game.stage.active = true;
 
   // Initialize keypress event connections
@@ -344,7 +354,7 @@ export const loadSongDetail = async (songData) => {
   const firstMapData = songData.maps[0];
   const { Title } = firstMapData["[Metadata]"];
   const img = firstMapData["[Events]"][0][2].replaceAll('"', "");
-  const imgPath = `./assets/songs/${songData.name}/${img}`;
+  const imgPath = `${SONGS_PATH}${songData.name}/${img}`;
 
   // Assign images
   imgBackground.src = imgPath;
@@ -362,18 +372,20 @@ export const loadSongDetail = async (songData) => {
     mapsContainer.appendChild(detailButton);
     detailButton.addEventListener("click", async () => {
       mainSongsContainer.style.display = "none";
+
+      lastSelectedSong = songData;
+
       await loadSong(mapData, `assets/songs/${songData.name}/`);
     });
   });
 };
 
 export const loadSongsList = async () => {
+  let firstTime = true;
+
   if (!songsData) {
     songsData = await getSongsData();
   }
-
-  const songsContainer = document.getElementById("songsContainer");
-  let hasLoadedDetailPage = false;
 
   mainSongsContainer.style.display = "grid";
   songsContainer.innerHTML = "";
@@ -384,9 +396,9 @@ export const loadSongsList = async () => {
       return;
     }
 
-    if (!hasLoadedDetailPage) {
-      loadSongDetail(songData);
-      hasLoadedDetailPage = true;
+    if (firstTime) {
+      loadSongDetail(lastSelectedSong || songData);
+      firstTime = false;
     }
 
     const hitObjects = mapData["[HitObjects]"];
