@@ -13,7 +13,7 @@ const getMainCanvas = document.getElementById("mainCanvas");
 const settingsBtn = document.getElementById("settingsBtn");
 
 kaboom({
-  background: [0, 0, 0],
+  background: [32, 32, 32],
   canvas: getMainCanvas,
 });
 

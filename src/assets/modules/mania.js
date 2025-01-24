@@ -5,7 +5,7 @@ import { decodeOsuFormat } from "./parser.js";
 const ctx = new AudioContext();
 
 // ...
-const SONGS_PATH = "assets/songs/";
+const SONGS_PATH = "./assets/songs/";
 const INNER_WIDTH = window.innerWidth;
 const INNER_HEIGHT = window.innerHeight;
 
@@ -62,7 +62,7 @@ let _storage = {
 
 // Functions
 const initSongsDir = async () => {
-  const response = await fetch("/songsDir.json/").then((res) => res.text());
+  const response = await fetch("./songsDir.json").then((res) => res.text());
   songsDir = JSON.parse(response);
 };
 
@@ -120,7 +120,7 @@ export const loadSettingsToStorage = () => {
 export const notify = (
   _text,
   _textColor = color(255, 255, 255),
-  _position = pos(INNER_WIDTH / 2, INNER_HEIGHT / 2)
+  _position = pos(INNER_WIDTH / 2, INNER_HEIGHT / 2),
 ) =>
   add([
     text(_text),
@@ -149,7 +149,7 @@ export const cancelStage = async () => {
   });
 
   // Destroy stage kaboom.js elments
-  ["hitLine", "note", "lane", "notification"].forEach((tag) => {
+  ["hitLine", "note", "lane", "notification", "score"].forEach((tag) => {
     destroyAll(tag);
   });
 
@@ -174,12 +174,12 @@ export const getSongsData = async (overwriteSongDir) => {
           .map(async (fileName) => {
             const pathToFile = `${SONGS_PATH}${tbl.name}/${fileName}`;
             const fileContent = await fetch(pathToFile).then((res) =>
-              res.text()
+              res.text(),
             );
             const osuFormat = await decodeOsuFormat(fileContent);
 
             return osuFormat;
-          })
+          }),
       );
 
       return {
@@ -187,7 +187,7 @@ export const getSongsData = async (overwriteSongDir) => {
         path: pathToFolder,
         maps: maps,
       };
-    })
+    }),
   );
 
   return songsData;
@@ -203,6 +203,9 @@ export const loadSong = async (mapData, songPath) => {
   const maxHitDistance = _storage.maxHitDistance;
   const missPositionThreshold = hitLinePosition + maxHitDistance;
 
+  let scoreElement;
+  let score = 0;
+
   let startedTimeline;
   let currentTime = 0;
   let upcomingNotes = [];
@@ -210,6 +213,9 @@ export const loadSong = async (mapData, songPath) => {
 
   const buildStage = () => {
     console.debug("[*] Building stage...");
+
+    // Score element
+    scoreElement = add([text("0"), pos(24, 24), "score"]);
 
     // Create lanes
     Array.from({ length: 4 }).forEach((_, i) => {
@@ -237,7 +243,7 @@ export const loadSong = async (mapData, songPath) => {
 
     upcomingNotes = mapData["[HitObjects]"]
       .filter((noteData) => noteData[0] !== "")
-      .filter((noteData) => noteData[2] < 2000)
+      // .filter((noteData) => noteData[2] < 2000)
       .map((noteData) => ({
         lanePosition: Number(noteData[0]),
         spawnTime: Number(noteData[2]),
@@ -252,21 +258,22 @@ export const loadSong = async (mapData, songPath) => {
 
   const handleNoteHit = (timingDiff, closestNote) => {
     if (timingDiff <= maxHitDistance * 0.3) {
+      score += 300;
       notify("Perfect!", color(255, 100, 255));
     } else if (timingDiff <= maxHitDistance * 0.5) {
+      score += 200;
       notify("Great!", color(255, 255, 100));
     } else if (timingDiff <= maxHitDistance) {
+      score += 20;
       notify("Bad!", color(100, 255, 100));
     } else {
       notify("Miss!", color(255, 100, 100));
     }
+
+    scoreElement.text = score;
   };
 
   const update = async () => {
-    if (!startedTimeline) {
-      startedTimeline = _storage.audio.context.currentTime;
-    }
-
     currentTime = (_storage.audio.context.currentTime - startedTimeline) * 1000; // _storage.audio.context.currentTime * 1000;
 
     // Handle next note
@@ -329,12 +336,13 @@ export const loadSong = async (mapData, songPath) => {
 
   await wait(1);
 
+  // Initialize audio
+  await playAudio(`${songPath}${mapData["[General]"].AudioFilename}`);
+
   // Update loop
   _storage.eventConnection.renderLoop = onUpdate(update);
   _storage.active = true;
-
-  // Initialize audio
-  await playAudio(`${songPath}${mapData["[General]"].AudioFilename}`);
+  startedTimeline = _storage.audio.context.currentTime;
 
   // Initialize keypress event connections
   const laneOnKeyPress = (laneNumber) => {
@@ -353,7 +361,7 @@ export const loadSong = async (mapData, songPath) => {
 
   Object.entries(KEY_MAP).forEach(([key, laneIndex]) => {
     const laneNumber = Object.entries(LANE_POSITIONS).find(
-      ([_, idx]) => idx === laneIndex
+      ([_, idx]) => idx === laneIndex,
     )[0];
 
     const keyConnection = onKeyPress(key, () => laneOnKeyPress(laneNumber));
@@ -383,7 +391,7 @@ export const loadSongDetail = async (songData) => {
   // Load song
   await playAudio(
     `${songData.path}/${AudioFilename}`,
-    Number(PreviewTime) / 1000
+    Number(PreviewTime) / 1000,
   );
 
   // Assign images
@@ -396,7 +404,7 @@ export const loadSongDetail = async (songData) => {
 
   // Update map elements
   const maps = songData.maps.sort(
-    (a, b) => calcDifficulty(a) - calcDifficulty(b)
+    (a, b) => calcDifficulty(a) - calcDifficulty(b),
   );
 
   maps.forEach((mapData) => {
@@ -410,9 +418,9 @@ export const loadSongDetail = async (songData) => {
     detailButton.addEventListener("click", async () => {
       mainSongsContainer.style.display = "none";
 
-      lastSelectedSong = songData;
+      // lastSelectedSong = songData;
 
-      await loadSong(mapData, `assets/songs/${songData.name}/`);
+      await loadSong(mapData, `./assets/songs/${songData.name}/`);
 
       mainCanvas.focus();
     });
