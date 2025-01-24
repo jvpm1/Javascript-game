@@ -1,27 +1,13 @@
-# Folder structure
+# READ FIRST
 
-- `src` - source code for your kaboom project
-- `www` - distribution folder, contains your index.html, built js bundle and static assets
+**Mania** is the main game that i am working on.
+Go to the branch mania to check it out.
 
+## FAQ
 
-## Development
+### Where are the games?
 
-```sh
-$ npm run dev
-```
+Every branch is a different game.
+<br> If you check the readme of the branch, you'll see what the game is.
 
-will start a dev server at http://localhost:8000
-
-## Distribution
-
-```sh
-$ npm run build
-```
-
-will build your js files into `www/main.js`
-
-```sh
-$ npm run bundle
-```
-
-will build your game and package into a .zip file, you can upload to your server or itch.io / newground etc.
+Play test met Thomas 17 Januari
