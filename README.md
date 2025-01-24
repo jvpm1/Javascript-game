@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="files/assetslogo.png" width="30%" alt="Stage">
+  <img src="files/assets/logo.png" width="30%" alt="Stage">
 </p>
 
 ## Contents
@@ -21,18 +21,18 @@ Inspired by: https://osu.ppy.sh/
 
 #### ver 1.1 alpha
 
-![Video](files/assetsgameplay_ver1.1.mp4)
+![Video](files/assets/gameplay_ver1.1.mp4)
 
 #### ver 0.1
 
-![Video](files/assetsgameplay_ver0.1.mp4)
+![Video](files/assets/gameplay_ver0.1.mp4)
 
 ### Picture(s)
 
 #### ver 1.1 alpha
 
-![Songs list](files/assetssongsList_ver1.1.png)
-![Stage](files/assetsstage_ver1.1.png)
+![Songs list](files/assets/songsList_ver1.1.png)
+![Stage](files/assets/stage_ver1.1.png)
 
 ## FAQ
 
