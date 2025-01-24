@@ -1,62 +1,78 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <script src="https://cdn.tailwindcss.com"></script>
+        <script src="https://cdn.tailwindcss.com"></script>
 
-    <title>JSGame</title>
-  </head>
-  <body class="text-white">
-    <main
-      id="mainSongsContainer"
-      class="absolute w-full h-full grid-cols-2 gap-0 bg-black"
-    >
-      <div class="absolute w-full h-full overflow-hidden">
-        <img
-          src=""
-          alt=""
-          id="imgBackground"
-          class="absolute inset-0 w-full h-full object-cover scale-200 blur-lg brightness-50"
-        />
-      </div>
-
-      <div
-        id="songsContainer"
-        class="relative p-5 gap-8 overflow-y-scroll"
-        style="-ms-overflow-style: none; scrollbar-width: none"
-      ></div>
-
-      <div class="detailContainer relative p-5 flex flex-col-reverse gap">
-        <div
-          class="relative flex flex-col w-full h-full rounded-2xl bg-zinc-950/20 backdrop-blur-2xl p-5"
+        <title>JSGame</title>
+    </head>
+    <body class="text-white">
+        <main
+            id="mainSongsContainer"
+            class="absolute w-full h-full grid-cols-2 gap-0 bg-black"
         >
-          <div
-            id="detailTitleContainer"
-            class="relative w-full flex flex-col h-auto justify-center overflow-hidden rounded-xl"
-          >
-            <img
-              src=""
-              alt=""
-              id="detailImg"
-              class="absolute inset-0 w-full h-full object-cover brightness-75 blur-xl scale-110"
-            />
-            <div
-              id="detailTitle"
-              class="relative text-center text-5xl p-5 font-bold"
-            ></div>
-          </div>
-          <div
-            id="mapsContainer"
-            class="relative overflow-y-auto h-[calc(100vh-200px)] p-6"
-            style="-ms-overflow-style: none; scrollbar-width: none"
-          ></div>
-        </div>
-      </div>
-    </main>
+            <div class="absolute w-full h-full overflow-hidden">
+                <img
+                    src=""
+                    alt=""
+                    id="imgBackground"
+                    class="absolute inset-0 w-full h-full object-cover scale-200 blur-lg brightness-50"
+                />
+            </div>
 
-    <canvas id="mainCanvas" class="block"></canvas>
-    <script src="./build.js"></script>
-  </body>
+            <div
+                id="songsContainer"
+                class="relative p-5 gap-8 overflow-y-scroll"
+                style="-ms-overflow-style: none; scrollbar-width: none"
+            ></div>
+
+            <div class="detailContainer relative p-5 flex flex-col-reverse gap">
+                <div
+                    class="relative flex flex-col w-full h-full rounded-2xl bg-zinc-950/20 backdrop-blur-2xl p-5"
+                >
+                    <div
+                        id="detailTitleContainer"
+                        class="relative w-full flex flex-col h-auto justify-center overflow-hidden rounded-xl"
+                    >
+                        <img
+                            src=""
+                            alt=""
+                            id="detailImg"
+                            class="absolute inset-0 w-full h-full object-cover brightness-75 blur-xl scale-110"
+                        />
+                        <div
+                            id="detailTitle"
+                            class="relative text-center text-5xl p-5 font-bold text-nowrap"
+                        ></div>
+                    </div>
+                    <div
+                        id="mapsContainer"
+                        class="relative block overflow-y-auto h-[calc(100vh-220px)] p-6"
+                        style="-ms-overflow-style: none; scrollbar-width: none"
+                    ></div>
+                    <div
+                        class="relative h-12 w-full p-3 bg-black/20 rounded-xl"
+                    >
+                        <button class="w-auto h-full" id="settingsBtn">
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="currentColor"
+                                class="bi bi-gear-wide-connected h-full"
+                                viewBox="0 0 16 16"
+                            >
+                                <path
+                                    d="M7.068.727c.243-.97 1.62-.97 1.864 0l.071.286a.96.96 0 0 0 1.622.434l.205-.211c.695-.719 1.888-.03 1.613.931l-.08.284a.96.96 0 0 0 1.187 1.187l.283-.081c.96-.275 1.65.918.931 1.613l-.211.205a.96.96 0 0 0 .434 1.622l.286.071c.97.243.97 1.62 0 1.864l-.286.071a.96.96 0 0 0-.434 1.622l.211.205c.719.695.03 1.888-.931 1.613l-.284-.08a.96.96 0 0 0-1.187 1.187l.081.283c.275.96-.918 1.65-1.613.931l-.205-.211a.96.96 0 0 0-1.622.434l-.071.286c-.243.97-1.62.97-1.864 0l-.071-.286a.96.96 0 0 0-1.622-.434l-.205.211c-.695.719-1.888.03-1.613-.931l.08-.284a.96.96 0 0 0-1.186-1.187l-.284.081c-.96.275-1.65-.918-.931-1.613l.211-.205a.96.96 0 0 0-.434-1.622l-.286-.071c-.97-.243-.97-1.62 0-1.864l.286-.071a.96.96 0 0 0 .434-1.622l-.211-.205c-.719-.695-.03-1.888.931-1.613l.284.08a.96.96 0 0 0 1.187-1.186l-.081-.284c-.275-.96.918-1.65 1.613-.931l.205.211a.96.96 0 0 0 1.622-.434zM12.973 8.5H8.25l-2.834 3.779A4.998 4.998 0 0 0 12.973 8.5m0-1a4.998 4.998 0 0 0-7.557-3.779l2.834 3.78zM5.048 3.967l-.087.065zm-.431.355A4.98 4.98 0 0 0 3.002 8c0 1.455.622 2.765 1.615 3.678L7.375 8zm.344 7.646.087.065z"
+                                />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <canvas id="mainCanvas" class="block"></canvas>
+        <script src="./build.js"></script>
+    </body>
 </html>

@@ -1,7 +1,10 @@
 // Imports
 import { decodeOsuFormat } from "./parser.js";
 
-// Core
+// ...
+const ctx = new AudioContext();
+
+// ...
 const SONGS_PATH = "assets/songs/";
 const INNER_WIDTH = window.innerWidth;
 const INNER_HEIGHT = window.innerHeight;
@@ -36,20 +39,24 @@ let lastSelectedSong;
 let songsData;
 let songsDir;
 
-let game = {
-  stage: {
-    active: false,
+let settings = {
+  approachTime: 600,
 
-    approachTime: 600,
+  hitLineOffset: 150,
 
-    laneWidth: 140,
-    laneGap: 20,
-    hitLineOffset: 150,
-    maxHitDistance: 200,
+  laneWidth: 140,
+  laneGap: 20,
+};
 
+let _storage = {
+  active: false,
+  audio: null,
+
+  maxHitDistance: 200,
+
+  eventConnection: {
     renderLoop: null,
     keys: {},
-    audio: new Audio(),
   },
 };
 
@@ -70,6 +77,46 @@ function msToTime(s) {
   return mins + ":" + secs;
 }
 
+const stopAudio = async () => {
+  if (!_storage.audio || !_storage.audio.stop) return;
+  await _storage.audio.stop();
+};
+
+const playAudio = async (filePath, startTime = 0) => {
+  // Mp3 only
+  const songData = await fetch(filePath)
+    .then((data) => data.arrayBuffer())
+    .then((arrayBuffer) => ctx.decodeAudioData(arrayBuffer));
+
+  await stopAudio();
+
+  const audio = ctx.createBufferSource();
+  audio.buffer = songData;
+  audio.connect(ctx.destination);
+  audio.start(ctx.currentTime, startTime);
+
+  _storage.audio = audio;
+};
+
+export const saveSettingsToStorage = () => {
+  Object.entries(settings).forEach((tbl) => {
+    const [name, value] = [tbl[0], tbl[1]];
+
+    localStorage[name] = String(value);
+  });
+};
+
+export const loadSettingsToStorage = () => {
+  Object.entries(settings).forEach((tbl) => {
+    const name = tbl[0];
+
+    const localStorageValue = localStorage[name];
+    if (!localStorageValue) return;
+
+    settings[name] = Number(localStorageValue);
+  });
+};
+
 export const notify = (
   _text,
   _textColor = color(255, 255, 255),
@@ -85,20 +132,19 @@ export const notify = (
   ]);
 
 export const cancelStage = async () => {
-  const isActive = game.stage.active;
+  const isActive = _storage.active;
   if (!isActive) {
     return isActive;
   }
 
   // Stop audio
-  game.stage.audio.pause();
-  game.stage.audio.currentTime = 0;
+  await stopAudio();
 
   // Disconnect loop(): function
-  await game.stage.renderLoop.cancel();
+  await _storage.eventConnection.renderLoop.cancel();
 
   // Disconnect keys (d, f, j, and k) connect event
-  Object.values(game.stage.keys).forEach((keyConnection) => {
+  Object.values(_storage.eventConnection.keys).forEach((keyConnection) => {
     keyConnection.cancel();
   });
 
@@ -107,7 +153,7 @@ export const cancelStage = async () => {
     destroyAll(tag);
   });
 
-  game.stage.active = false;
+  _storage.active = false;
 
   return isActive;
 };
@@ -144,57 +190,20 @@ export const getSongsData = async (overwriteSongDir) => {
     })
   );
 
-  // try {
-  //   const songNames = await getDir(songsFolderDir);
-
-  //   const fetchedSongsData = await Promise.all(
-  //     songNames.map(async (songName) => {
-  //       const cleanedSongName = songName.endsWith("/")
-  //         ? songName.slice(0, -1)
-  //         : songName;
-  //       const songFolderDir = `${songsFolderDir}${cleanedSongName}`;
-
-  //       const songChildren = await getDir(songFolderDir);
-  //       const osuFiles = songChildren.filter((file) => file.endsWith(".osu"));
-
-  //       const mapsData = await Promise.all(
-  //         osuFiles.map(async (file) => {
-  //           const osuPath = `${songFolderDir}/${file}`;
-  //           const response = await fetch(osuPath);
-  //           const osuText = await response.text();
-  //           return decodeOsuFormat(osuText);
-  //         }),
-  //       );
-
-  //       return {
-  //         name: cleanedSongName,
-  //         path: songFolderDir,
-  //         maps: mapsData,
-  //       };
-  //     }),
-  //   );
-
-  //   console.debug("Done caching song data!");
-
-  //   return fetchedSongsData;
-  // } catch (error) {
-  //   console.error(`getSongs error: ${error}`);
-
-  //   return null;
-  // }
   return songsData;
 };
 
 export const loadSong = async (mapData, songPath) => {
   // Cache calculations
-  const approachTime = game.stage.approachTime;
-  const lanesDefinedWidth = game.stage.laneWidth * 4 + game.stage.laneGap * 3;
+  const approachTime = settings.approachTime;
+  const lanesDefinedWidth = settings.laneWidth * 4 + settings.laneGap * 3;
   const laneStartPosition = INNER_WIDTH / 2 - lanesDefinedWidth / 2;
-  const laneGapAndWidth = game.stage.laneWidth + game.stage.laneGap;
-  const hitLinePosition = INNER_HEIGHT - game.stage.hitLineOffset;
-  const maxHitDistance = game.stage.maxHitDistance;
+  const laneGapAndWidth = settings.laneWidth + settings.laneGap;
+  const hitLinePosition = INNER_HEIGHT - settings.hitLineOffset;
+  const maxHitDistance = _storage.maxHitDistance;
   const missPositionThreshold = hitLinePosition + maxHitDistance;
 
+  let startedTimeline;
   let currentTime = 0;
   let upcomingNotes = [];
   let laneNotes = [];
@@ -205,7 +214,7 @@ export const loadSong = async (mapData, songPath) => {
     // Create lanes
     Array.from({ length: 4 }).forEach((_, i) => {
       add([
-        rect(game.stage.laneWidth, INNER_HEIGHT),
+        rect(settings.laneWidth, INNER_HEIGHT),
         pos(laneStartPosition + i * laneGapAndWidth, 0),
         color(30, 30, 30),
         "lane",
@@ -228,6 +237,7 @@ export const loadSong = async (mapData, songPath) => {
 
     upcomingNotes = mapData["[HitObjects]"]
       .filter((noteData) => noteData[0] !== "")
+      .filter((noteData) => noteData[2] < 2000)
       .map((noteData) => ({
         lanePosition: Number(noteData[0]),
         spawnTime: Number(noteData[2]),
@@ -253,18 +263,26 @@ export const loadSong = async (mapData, songPath) => {
   };
 
   const update = async () => {
-    currentTime = game.stage.audio.currentTime * 1000;
+    if (!startedTimeline) {
+      startedTimeline = _storage.audio.context.currentTime;
+    }
+
+    currentTime = (_storage.audio.context.currentTime - startedTimeline) * 1000; // _storage.audio.context.currentTime * 1000;
 
     // Handle next note
     const nextNote = upcomingNotes[0];
-    if (!nextNote) {
+    const notes = get("note");
+
+    // Stop when there's no more notes to be spawned and notes that are rendered
+    if (!notes[0] && !nextNote) {
+      await wait(2);
       await cancelStage();
       await loadSongsList();
       return;
     }
 
     // Spawn note
-    if (currentTime > nextNote.spawnTime - approachTime) {
+    if (nextNote && currentTime > nextNote.spawnTime - approachTime) {
       const startTime = currentTime;
       const totalDistance = nextNote.spawnTime - startTime;
 
@@ -273,7 +291,7 @@ export const loadSong = async (mapData, songPath) => {
         LANE_POSITIONS[nextNote.lanePosition] * laneGapAndWidth;
 
       const note = add([
-        rect(game.stage.laneWidth, 30),
+        rect(settings.laneWidth, 30),
         pos(horizontalPosition, 0),
         color(255, 255, 255),
         area(),
@@ -292,7 +310,7 @@ export const loadSong = async (mapData, songPath) => {
     }
 
     // Update existing notes
-    get("note").forEach((note) => {
+    notes.forEach((note) => {
       const currentProgress = currentTime - note.startTime;
       const progressPercentage = currentProgress / note.totalDistance;
 
@@ -309,17 +327,14 @@ export const loadSong = async (mapData, songPath) => {
   buildStage();
   init();
 
-  // Initialize audio
-  game.stage.audio.setAttribute(
-    "src",
-    `${songPath}${mapData["[General]"].AudioFilename}`
-  );
-  game.stage.audio.load();
-  await game.stage.audio.play();
+  await wait(1);
 
   // Update loop
-  game.stage.renderLoop = onUpdate(update);
-  game.stage.active = true;
+  _storage.eventConnection.renderLoop = onUpdate(update);
+  _storage.active = true;
+
+  // Initialize audio
+  await playAudio(`${songPath}${mapData["[General]"].AudioFilename}`);
 
   // Initialize keypress event connections
   const laneOnKeyPress = (laneNumber) => {
@@ -343,40 +358,53 @@ export const loadSong = async (mapData, songPath) => {
 
     const keyConnection = onKeyPress(key, () => laneOnKeyPress(laneNumber));
 
-    game.stage.keys[key] = keyConnection;
+    _storage.eventConnection.keys[key] = keyConnection;
   });
+};
+
+export const calcDifficulty = (mapData) => {
+  return Math.floor(mapData["[HitObjects]"].length / 100);
 };
 
 export const loadSongDetail = async (songData) => {
   const firstMapData = songData.maps[0];
 
   const { Title } = firstMapData["[Metadata]"];
+  const { AudioFilename, PreviewTime } = firstMapData["[General]"];
   const img = firstMapData["[Events]"][0][2].replaceAll('"', "");
   const imgPath = `${SONGS_PATH}${songData.name}/${img}`;
 
-  console.log(songData);
+  // Loading text
+  detailTitle.innerHTML = "Loading...";
+  imgBackground.src = "";
+  detailImg.src = "";
+  mapsContainer.innerHTML = "";
+
+  // Load song
+  await playAudio(
+    `${songData.path}/${AudioFilename}`,
+    Number(PreviewTime) / 1000
+  );
 
   // Assign images
   imgBackground.src = imgPath;
   detailImg.src = imgPath;
   detailTitle.innerHTML = Title;
 
-  // Load song
-  game.stage.audio.setAttribute(
-    "src",
-    `${songData.path}/${firstMapData["[General]"].AudioFilename}`
-  );
-
-  game.stage.audio.load();
-  await game.stage.audio.play();
+  // Clear elements
+  mapsContainer.innerHTML = "";
 
   // Update map elements
-  mapsContainer.innerHTML = "";
-  songData.maps.forEach((mapData) => {
+  const maps = songData.maps.sort(
+    (a, b) => calcDifficulty(a) - calcDifficulty(b)
+  );
+
+  maps.forEach((mapData) => {
+    const rating = calcDifficulty(mapData);
     const detailButton = document.createElement("button");
     detailButton.className =
       "relative w-full h-20 bg-zinc-950/70 rounded-lg font-bold text-2xl text-left p-5 mb-5 ";
-    detailButton.innerHTML = mapData["[Metadata]"].Version;
+    detailButton.innerHTML = `[${rating}] ${mapData["[Metadata]"].Version}`;
 
     mapsContainer.appendChild(detailButton);
     detailButton.addEventListener("click", async () => {
@@ -395,6 +423,10 @@ export const loadSongsList = async () => {
   if (!songsData) {
     songsData = await getSongsData();
   }
+
+  // if (lastSelectedSong) {
+  //   loadSongDetail(songsData[0]);
+  // }
 
   mainSongsContainer.style.display = "grid";
   songsContainer.innerHTML = "";
@@ -439,4 +471,123 @@ export const loadSongsList = async () => {
 
     songsContainer.appendChild(songButton);
   });
+};
+
+export const loadSettingsWindow = async () => {
+  const settingsWindow = document.createElement("div");
+  settingsWindow.id = "settingsWindow";
+  settingsWindow.style.display = "none";
+  settingsWindow.innerHTML = `
+    <div
+        class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
+    >
+        <div class="bg-zinc-900/80 rounded-xl p-6 w-96 shadow-xl">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold">Game Settings</h2>
+                <button
+                    id="closeSettings"
+                    class="p-1 hover:bg-zinc-800 rounded"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    >
+                        <path d="M18 6 6 18"></path>
+                        <path d="m6 6 12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <div id="settingsItems" class="space-y-4"></div>
+
+            <div class="mt-6 flex justify-end space-x-3">
+                <button
+                    id="cancelSettings"
+                    class="px-4 py-2 rounded bg-zinc-700"
+                >
+                    Cancel
+                </button>
+                <button
+                    id="saveSettings"
+                    class="px-4 py-2 rounded bg-blue-400"
+                >
+                    Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+  `;
+
+  document.body.appendChild(settingsWindow);
+
+  const settingsItems = document.getElementById("settingsItems");
+  const closeBtn = document.getElementById("closeSettings");
+  const cancelBtn = document.getElementById("cancelSettings");
+  const saveBtn = document.getElementById("saveSettings");
+
+  const inputs = [];
+
+  function closeWindow() {
+    settingsWindow.remove();
+    inputs.length = 0; // Clear out inputs array
+  }
+
+  settingsWindow.style.display = "block";
+
+  function loadSettings() {
+    Object.entries(settings).forEach((tbl) => {
+      const name = tbl[0];
+      const value = tbl[1];
+
+      const container = document.createElement("div");
+      const label = document.createElement("label");
+      const input = document.createElement("input");
+
+      label.className = "block text-sm mb-1";
+      label.textContent = name;
+
+      input.className = "w-full bg-zinc-800 rounded p-2 text-white";
+      input.type = "number";
+      input.value = value;
+
+      inputs.push({
+        name: name,
+        // defaultValue: value,
+
+        // container: container,
+        // label: label,
+        input: input,
+      });
+
+      container.appendChild(label);
+      container.appendChild(input);
+      settingsItems.appendChild(container);
+    });
+  }
+
+  function saveSettings() {
+    inputs.forEach((tbl) => {
+      const value = Number(tbl.input.value);
+      const name = tbl.name;
+
+      settings[name] = value;
+    });
+
+    saveSettingsToStorage();
+
+    closeWindow();
+  }
+
+  loadSettings();
+
+  closeBtn.addEventListener("click", closeWindow);
+  cancelBtn.addEventListener("click", closeWindow);
+  saveBtn.addEventListener("click", saveSettings);
 };
