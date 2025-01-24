@@ -7,15 +7,29 @@
 1. [Current branch preview](#current-branch-preview)
    1. [Video(s)](#videos)
    2. [Picture(s)](#pictures)
-2. [FAQ](#faq)
+2. [About](#about)
+3. [Introduction](#introduction)
+3. [FAQ](#faq)
    1. [Where are the games?](#where-are-the-games)
 
-## Current branch preview
+
+## Introduction
 
 > I remade osu mania with kaboom.js
 > <br> You can load songs from the original game into this game and it'll work the same.
 
 Inspired by: https://osu.ppy.sh/
+
+## Installation
+> How to install with filezilla
+1. Install file
+```bash
+git clone https://github.com/jvpm1/jsgame.git
+```
+
+2. Put the ``src`` folder in your server's public_html
+
+3. Now you're ready to play!
 
 ## Video(s)
 
